@@ -32,7 +32,7 @@ class Train(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     train_num = db.Column(db.String)
-    is_express = db.Column(db.Boolean)
+    service_type = db.Column(db.String)
     origin = db.Column(db.String)
     destination = db.Column(db.String)
 
