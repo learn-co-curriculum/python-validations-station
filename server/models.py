@@ -1,9 +1,21 @@
+from datetime import timedelta
+
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import MetaData
 from sqlalchemy.orm import validates
 from sqlalchemy_serializer import SerializerMixin
 
-db = SQLAlchemy()
+convention = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
+
+metadata = MetaData(naming_convention=convention)
+
+db = SQLAlchemy(metadata=metadata, engine_options={"echo": True})
 
 
 class Station(db.Model):
@@ -35,13 +47,13 @@ class Platform(db.Model):
     station_id = db.Column(db.Integer, db.ForeignKey("stations.id"))
 
     __table_args__ = (
-        UniqueConstraint(
+        db.UniqueConstraint(
             "platform_num", "station_id", name="unique_platform_per_station"
         ),
     )
 
     def __repr__(self):
-        return f"<Platform {self.name}>"
+        return f"<Platform No. {self.platform_num}>"
 
     @validates("platform_num")
     def validate_platform_num(self, key, platform_num):
@@ -88,6 +100,9 @@ class Train(db.Model):
             raise AssertionError("Service type must be either 'express' or 'local'")
         return service_type
 
+    def __repr__(self):
+        return f"<Train {self.train_num}>"
+
 
 class Assignment(db.Model):
     __tablename__ = "assignments"
@@ -98,5 +113,35 @@ class Assignment(db.Model):
     train_id = db.Column(db.Integer, db.ForeignKey("trains.id"))
     platform_id = db.Column(db.Integer, db.ForeignKey("platforms.id"))
 
+    __table_args__ = (
+        db.UniqueConstraint(
+            "platform_id", "arrival_time", name="unique_platform_assignment"
+        ),
+    )
+
     def __repr__(self):
         return f"<Assignment Train No: {self.train.train_num} Platform: {self.platform.platform_num}>"
+
+    @validates("arrival_time", "departure_time")
+    def validate_times(self, key, time):
+        if key == "arrival_time" and self.departure_time and time > self.departure_time:
+            raise AssertionError("Arrival time must be before departure time")
+        elif key == "departure_time" and self.arrival_time and time < self.arrival_time:
+            raise AssertionError("Departure time must be after arrival time")
+        elif (
+            key == "departure_time"
+            and self.arrival_time
+            and (time - self.arrival_time) > timedelta(minutes=20)
+        ):
+            raise AssertionError("Stay at platform must not be more than 20 minutes")
+        return time
+
+    @validates("platform_id")
+    def validate_platform(self, key, platform_id):
+        assignment = Assignment.query.filter(
+            Assignment.platform_id == platform_id,
+            Assignment.departure_time > self.arrival_time,
+        ).first()
+        if assignment:
+            raise AssertionError("Platform must be vacant at the time of assignment")
+        return platform_id

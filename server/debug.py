@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 from app import app
-from models import *
+from models import Assignment, Platform, Station, Train, db
 
 # alternative to flask shell
 if __name__ == "__main__":
-    import ipdb
+    with app.app_context():
+        import ipdb
 
-    ipdb.set_trace()
+        ipdb.set_trace()
