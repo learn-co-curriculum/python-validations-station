@@ -11,7 +11,7 @@ cd into server and run the following in Terminal:
 * export FLASK_APP=app.py _(if you'll run from the Flask shell)_
 * export FLASK_RUN_PORT=5555 _(if you'll run from the Flask shell)_
 * flask db init
-* flask db revision --autogenerate -m'Create tables' 
+* flask db migrate -m'Create tables' 
 * flask db upgrade 
 * python seed.py
 
@@ -53,7 +53,7 @@ The relationship between `platforms` and `trains` is many-to-many through `assig
 ### `Assignment`
 - must have `arrival` and `departure` times
 
-BONUS (see the docs on [the @validates decorator](#) to help with these):
+BONUS (see the docs on [the @validates decorator](https://docs.sqlalchemy.org/en/20/orm/mapped_attributes.html#simple-validators) to help with these):
 - must arrive before it departs
 - must not stay at platform for more than 20 minutes
 - must only be assigned to a vacant platform
